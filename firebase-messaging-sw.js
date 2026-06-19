@@ -1,5 +1,6 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js');
 
 firebase.initializeApp({
   apiKey: "AIzaSyCPGgtXoDUycykLaTSee0S0yY0tkeJpqKI",
@@ -19,6 +20,16 @@ messaging.onBackgroundMessage(function(payload) {
   var body  = (payload.notification && payload.notification.body)  ? payload.notification.body  : '';
   var icon  = (payload.notification && payload.notification.icon)  ? payload.notification.icon  : '/icon.png';
 
+  // ── Sauvegarde dans Firebase Realtime Database ──
+  firebase.database().ref('notifications').push({
+    title: title,
+    body:  body,
+    ts:    Date.now()
+  }).catch(function(err) {
+    console.error('[SW] Erreur écriture DB :', err);
+  });
+
+  // ── Affichage de la notification système ──
   var options = {
     body: body,
     icon: icon,
@@ -37,13 +48,10 @@ messaging.onBackgroundMessage(function(payload) {
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-
   if (event.action === 'close') return;
-
   var url = (event.notification.data && event.notification.data.url)
     ? event.notification.data.url
     : '/';
-
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
       for (var i = 0; i < clientList.length; i++) {
