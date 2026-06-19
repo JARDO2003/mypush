@@ -3,200 +3,516 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Express Notify — Récepteur</title>
-  <link rel="icon" href="/favicon.png" />
+  <title>Notifications — Récepteur</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0b0f1a;
-      --surface: #131929;
-      --border: #1e2d45;
-      --accent: #7c3aed;
-      --accent-glow: rgba(124,58,237,0.18);
-      --accent2: #3b82f6;
-      --green: #22c55e;
-      --green-glow: rgba(34,197,94,0.15);
-      --red: #ef4444;
-      --yellow: #f59e0b;
-      --text: #e2e8f0;
-      --muted: #64748b;
-      --card-bg: #0f1e33;
+      --bg: #0c0c0e;
+      --bg2: #111114;
+      --surface: #17171b;
+      --surface2: #1e1e24;
+      --border: rgba(255,255,255,0.06);
+      --border-strong: rgba(255,255,255,0.12);
+      --accent: #e2c97e;
+      --accent-dim: rgba(226,201,126,0.10);
+      --accent-glow: rgba(226,201,126,0.22);
+      --green: #4ade80;
+      --green-dim: rgba(74,222,128,0.10);
+      --red: #f87171;
+      --red-dim: rgba(248,113,113,0.10);
+      --yellow: #fbbf24;
+      --yellow-dim: rgba(251,191,36,0.10);
+      --text: #f0ede8;
+      --text2: rgba(240,237,232,0.55);
+      --text3: rgba(240,237,232,0.30);
+      --mono: 'DM Mono', monospace;
+      --display: 'Syne', sans-serif;
+      --body: 'Inter', sans-serif;
     }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', sans-serif;
+      font-family: var(--body);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 40px 16px 60px;
+      padding: 0 16px 80px;
+      overflow-x: hidden;
     }
+
+    /* ── FILM GRAIN overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 180px 180px;
+      opacity: 0.5;
+    }
+
+    /* ── HERO HEADER ── */
     header {
-      width: 100%; max-width: 520px;
-      text-align: center;
-      margin-bottom: 48px;
+      width: 100%;
+      max-width: 580px;
+      padding: 72px 0 56px;
+      position: relative;
+      z-index: 1;
     }
-    .logo-ring {
-      width: 72px; height: 72px;
-      border-radius: 50%;
-      border: 2px solid var(--accent);
-      box-shadow: 0 0 28px var(--accent-glow);
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 20px;
-      font-size: 28px;
-      background: var(--card-bg);
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
+
+    .eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 24px;
+      height: 1px;
+      background: var(--accent);
+    }
+
     h1 {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+      font-family: var(--display);
+      font-size: clamp(32px, 6vw, 48px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 18px;
     }
-    p.subtitle { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.6; }
-    .card {
-      width: 100%; max-width: 520px;
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.7;
+      max-width: 400px;
+    }
+
+    /* ── PULSE MONITOR ── */
+    .pulse-monitor {
+      width: 100%;
+      max-width: 580px;
+      height: 56px;
+      margin-bottom: 32px;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+
+    .pulse-line {
+      width: 100%;
+      height: 2px;
+      background: var(--border-strong);
+      position: relative;
+    }
+
+    #pulseCanvas {
+      width: 100%;
+      height: 56px;
+      display: block;
+      opacity: 0.35;
+    }
+
+    #pulseCanvas.active {
+      opacity: 1;
+    }
+
+    /* ── CONTENT GRID ── */
+    .grid {
+      width: 100%;
+      max-width: 580px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── SECTION LABELS ── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 28px 0 12px;
+    }
+
+    /* ── STATUS PANEL ── */
+    .panel {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 28px;
-      margin-bottom: 20px;
+      border-radius: 12px;
+      overflow: hidden;
     }
-    .card-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 13px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 1px;
-      color: var(--muted); margin-bottom: 18px;
-    }
+
     .status-row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
       border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
     }
+
     .status-row:last-child { border-bottom: none; }
-    .dot {
-      width: 10px; height: 10px;
-      border-radius: 50%; flex-shrink: 0;
-      background: var(--muted);
+    .status-row:hover { background: var(--surface2); }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--text3);
+      transition: all 0.3s;
     }
-    .dot.green  { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
-    .dot.red    { background: var(--red); }
-    .dot.yellow { background: var(--yellow); animation: pulse 1.5s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    .status-label { font-size: 14px; color: var(--text); flex: 1; }
-    .status-value { font-size: 12px; color: var(--muted); font-family: monospace; }
-    button {
-      width: 100%; padding: 14px;
-      border-radius: 10px; border: none;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px; font-weight: 600;
-      cursor: pointer; transition: all 0.2s;
+
+    .status-indicator.green {
+      background: var(--green);
+      box-shadow: 0 0 10px rgba(74,222,128,0.5);
     }
+
+    .status-indicator.red { background: var(--red); }
+
+    .status-indicator.yellow {
+      background: var(--yellow);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .status-name {
+      font-size: 13px;
+      color: var(--text);
+      flex: 1;
+      font-weight: 400;
+    }
+
+    .status-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text3);
+      text-align: right;
+    }
+
+    /* ── ACTIVATION BUTTON ── */
+    .activate-wrap {
+      margin-top: 20px;
+    }
+
     #btnEnable {
+      width: 100%;
+      padding: 18px 24px;
       background: var(--accent);
-      color: #fff;
-      box-shadow: 0 4px 20px var(--accent-glow);
-    }
-    #btnEnable:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
-    #btnEnable:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-    .token-box {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-family: monospace; font-size: 11px;
-      color: var(--muted);
-      word-break: break-all; line-height: 1.6;
-      margin-top: 14px; position: relative;
-      display: none;
-    }
-    .token-box.visible { display: block; }
-    .copy-btn {
-      position: absolute; top: 8px; right: 8px;
-      padding: 4px 10px; font-size: 11px;
-      background: var(--border); color: var(--text);
-      border-radius: 5px; border: none; cursor: pointer;
-      font-family: 'Inter', sans-serif; font-weight: 500;
-      width: auto;
-    }
-    .copy-btn:hover { background: var(--accent); color: #fff; }
-    #feed { display: flex; flex-direction: column; gap: 12px; }
-    .notif-item {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
+      color: #0c0c0e;
+      border: none;
       border-radius: 10px;
-      padding: 14px 16px;
-      animation: slideIn 0.3s ease;
+      font-family: var(--display);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
     }
-    @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-    .notif-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-    .notif-body  { font-size: 13px; color: var(--muted); line-height: 1.5; }
-    .notif-meta  { font-size: 11px; color: var(--border); margin-top: 8px; font-family: monospace; }
-    .empty-feed  { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0; }
+
+    #btnEnable::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.15s;
+    }
+
+    #btnEnable:hover:not(:disabled)::after { background: rgba(255,255,255,0.12); }
+    #btnEnable:active:not(:disabled) { transform: scale(0.99); }
+
+    #btnEnable:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #btnEnable.success {
+      background: var(--green);
+      color: #0c0c0e;
+    }
+
+    /* ── ALERT ── */
     #alert {
-      width: 100%; max-width: 520px;
-      padding: 12px 16px; border-radius: 10px;
-      font-size: 13px; margin-bottom: 16px; display: none;
+      width: 100%;
+      max-width: 580px;
+      padding: 13px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      display: none;
+      font-family: var(--mono);
+      position: relative;
+      z-index: 1;
     }
-    #alert.success { background: var(--green-glow); border: 1px solid var(--green); color: var(--green); display: block; }
-    #alert.error   { background: rgba(239,68,68,0.1); border: 1px solid var(--red); color: var(--red); display: block; }
+
+    #alert.success {
+      background: var(--green-dim);
+      border: 1px solid rgba(74,222,128,0.25);
+      color: var(--green);
+      display: block;
+    }
+
+    #alert.error {
+      background: var(--red-dim);
+      border: 1px solid rgba(248,113,113,0.25);
+      color: var(--red);
+      display: block;
+    }
+
+    /* ── FEED ── */
+    #feed {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .notif-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent);
+      border-radius: 10px;
+      padding: 16px 18px;
+      animation: appear 0.25s ease;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .notif-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .notif-title {
+      font-family: var(--display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .notif-time {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+    }
+
+    .notif-body {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.55;
+    }
+
+    .empty-feed {
+      padding: 32px 0;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+      opacity: 0.3;
+    }
+
+    .empty-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text3);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      width: 100%;
+      max-width: 580px;
+      padding-top: 48px;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-line {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 0.08em;
+    }
+
+    .cta-link {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+
+    .cta-link:hover { border-bottom-color: var(--accent); }
+
+    /* ── TOKEN BOX (hidden, internal use only) ── */
+    #tokenBox { display: none; }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="logo-ring">🔔</div>
-  <h1>Express Notify</h1>
-  <p class="subtitle">Activez les notifications pour les recevoir même lorsque l'appareil est verrouillé.</p>
+  <div class="eyebrow">système actif</div>
+  <h1>Récepteur de<br><span>notifications</span></h1>
+  <p class="subtitle">Autorisez une seule fois — recevez vos messages même lorsque l'appareil est verrouillé ou inactif.</p>
 </header>
+
+<!-- Pulse monitor -->
+<canvas id="pulseCanvas" width="580" height="56"></canvas>
 
 <div id="alert"></div>
 
-<div class="card">
-  <div class="card-title">État du système</div>
-  <div class="status-row">
-    <div class="dot" id="dotBrowser"></div>
-    <span class="status-label">Navigateur compatible</span>
-    <span class="status-value" id="valBrowser">—</span>
+<div class="grid">
+
+  <!-- Status -->
+  <div class="section-label">État du système</div>
+  <div class="panel">
+    <div class="status-row">
+      <div class="status-indicator" id="dotBrowser"></div>
+      <span class="status-name">Navigateur compatible</span>
+      <span class="status-val" id="valBrowser">—</span>
+    </div>
+    <div class="status-row">
+      <div class="status-indicator" id="dotSW"></div>
+      <span class="status-name">Service Worker</span>
+      <span class="status-val" id="valSW">—</span>
+    </div>
+    <div class="status-row">
+      <div class="status-indicator" id="dotPerm"></div>
+      <span class="status-name">Permission notifications</span>
+      <span class="status-val" id="valPerm">—</span>
+    </div>
+    <div class="status-row">
+      <div class="status-indicator" id="dotToken"></div>
+      <span class="status-name">Connexion sécurisée</span>
+      <span class="status-val" id="valToken">—</span>
+    </div>
   </div>
-  <div class="status-row">
-    <div class="dot" id="dotSW"></div>
-    <span class="status-label">Service Worker</span>
-    <span class="status-value" id="valSW">—</span>
+
+  <!-- Activate -->
+  <div class="section-label">Activation</div>
+  <div class="activate-wrap">
+    <button id="btnEnable">Activer les notifications</button>
   </div>
-  <div class="status-row">
-    <div class="dot" id="dotPerm"></div>
-    <span class="status-label">Permission notifications</span>
-    <span class="status-value" id="valPerm">—</span>
+
+  <!-- Hidden token (never shown to user) -->
+  <div id="tokenBox"><span id="tokenText"></span></div>
+
+  <!-- Feed -->
+  <div class="section-label">Notifications reçues</div>
+  <div id="feed">
+    <div class="empty-feed">
+      <div class="empty-icon">◎</div>
+      <div class="empty-text">En attente de messages entrants…</div>
+    </div>
   </div>
-  <div class="status-row">
-    <div class="dot" id="dotToken"></div>
-    <span class="status-label">Token FCM enregistré</span>
-    <span class="status-value" id="valToken">—</span>
-  </div>
+
 </div>
 
-<div class="card">
-  <div class="card-title">Activation</div>
-  <button id="btnEnable">Activer les notifications</button>
-  <div class="token-box" id="tokenBox">
-    <button class="copy-btn" id="copyBtn">Copier</button>
-    <span id="tokenText"></span>
-  </div>
-</div>
+<footer>
+  <span class="footer-line">FCM · PUSH API · SERVICE WORKER</span>
+  <a class="cta-link" href="z.html" target="_blank" rel="noopener">Accéder →</a>
+</footer>
 
-<div class="card">
-  <div class="card-title">Notifications reçues (session)</div>
-  <div id="feed"><div class="empty-feed">Aucune notification reçue pour l'instant.</div></div>
-</div>
+<!-- ── PULSE ANIMATION ── -->
+<script>
+(function() {
+  const canvas = document.getElementById('pulseCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 580;
+  const H = 56;
+  canvas.width = W;
+  canvas.height = H;
 
+  let active = false;
+  let offset = 0;
+
+  function drawPulse() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.beginPath();
+    ctx.strokeStyle = active ? 'rgba(226,201,126,0.7)' : 'rgba(240,237,232,0.12)';
+    ctx.lineWidth = 1.5;
+
+    const step = 4;
+    const mid = H / 2;
+    let x = 0;
+
+    ctx.moveTo(0, mid);
+
+    while (x < W) {
+      const phase = (x + offset) % 80;
+      let y = mid;
+
+      if (phase > 30 && phase < 36) y = mid - 22;
+      else if (phase >= 36 && phase < 40) y = mid + 10;
+      else if (phase >= 40 && phase < 44) y = mid - 6;
+      else if (phase >= 44 && phase < 48) y = mid + 2;
+
+      ctx.lineTo(x, y);
+      x += step;
+    }
+
+    ctx.stroke();
+    offset = active ? (offset + 1.5) % 80 : offset;
+    requestAnimationFrame(drawPulse);
+  }
+
+  drawPulse();
+
+  window._setPulseActive = function(val) {
+    active = val;
+  };
+})();
+</script>
+
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 
 <script>
-(function () {
-  var FIREBASE_CONFIG = {
+  const firebaseConfig = {
     apiKey: "AIzaSyCPGgtXoDUycykLaTSee0S0yY0tkeJpqKI",
     authDomain: "data-com-a94a8.firebaseapp.com",
     databaseURL: "https://data-com-a94a8-default-rtdb.firebaseio.com",
@@ -206,151 +522,160 @@
     appId: "1:276904640935:web:9cd805aeba6c34c767f682",
     measurementId: "G-FYQCWY5G4S"
   };
-  var VAPID_KEY = "BBmFUU8EgrWms0LnAcsleRMkYPXS7A0teI22WNVEpg2Xii6RwkQ6XuR1IfJAVUHUo8PabGi26OQ2iaYXMRs0IbU";
-  var apiBase  = window.location.origin;
-  var fcmToken = null;
+  const VAPID_KEY = "BBmFUU8EgrWms0LnAcsleRMkYPXS7A0teI22WNVEpg2Xii6RwkQ6XuR1IfJAVUHUo8PabGi26OQ2iaYXMRs0IbU";
+  const API_BASE  = window.location.origin;
 
-  function el(id) { return document.getElementById(id); }
+  const $ = id => document.getElementById(id);
+  let fcmToken = null;
 
-  function setDot(id, color) { el('dot' + id).className = 'dot ' + color; }
-  function setVal(id, txt)   { el('val' + id).textContent = txt; }
-
-  function showAlert(msg, type) {
-    el('alert').textContent = msg;
-    el('alert').className = type;
-    setTimeout(function () { el('alert').className = ''; }, 5000);
+  function setDot(id, color) {
+    const el = $('dot' + id);
+    el.className = 'status-indicator' + (color ? ' ' + color : '');
   }
 
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+  function setVal(id, txt) { $('val' + id).textContent = txt; }
+
+  function showAlert(msg, type) {
+    $('alert').textContent = msg;
+    $('alert').className = type;
+    setTimeout(() => { $('alert').className = ''; }, 5000);
   }
 
   function checkBrowser() {
-    var ok = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+    const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     setDot('Browser', ok ? 'green' : 'red');
     setVal('Browser', ok ? 'Supporté' : 'Non supporté');
     return ok;
   }
 
   function checkPermission() {
-    var p = Notification.permission;
+    const p = Notification.permission;
     setDot('Perm', p === 'granted' ? 'green' : p === 'denied' ? 'red' : 'yellow');
     setVal('Perm', p === 'granted' ? 'Accordée' : p === 'denied' ? 'Refusée' : 'En attente');
     return p;
   }
 
-  function registerSW() {
-    return navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(function (reg) {
-        setDot('SW', 'green'); setVal('SW', 'Enregistré');
-        return reg;
-      })
-      .catch(function (e) {
-        setDot('SW', 'red'); setVal('SW', 'Échec');
-        throw e;
+  async function registerSW() {
+    try {
+      const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      setDot('SW', 'green'); setVal('SW', 'Enregistré');
+      return reg;
+    } catch(e) {
+      setDot('SW', 'red'); setVal('SW', 'Échec');
+      throw e;
+    }
+  }
+
+  async function saveToken(token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/save-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, userId: null }),
       });
+      return await res.json();
+    } catch(e) { console.warn('save-token error', e); }
   }
 
-  function saveToken(token) {
-    return fetch(apiBase + '/api/save-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, userId: null })
-    })
-    .then(function (r) { return r.json(); })
-    .catch(function (e) { console.warn('save-token error', e); });
+  function listenForeground(messaging) {
+    messaging.onMessage(payload => {
+      console.log('[FCM] foreground:', payload);
+      addToFeed(payload.notification?.title || 'Sans titre', payload.notification?.body || '', payload.data);
+    });
   }
 
-  function addToFeed(title, body) {
-    var feed  = el('feed');
-    var empty = feed.querySelector('.empty-feed');
+  function addToFeed(title, body, data = {}) {
+    const feed = $('feed');
+    const empty = feed.querySelector('.empty-feed');
     if (empty) empty.remove();
-    var div = document.createElement('div');
-    div.className = 'notif-item';
-    div.innerHTML =
-      '<div class="notif-title">' + escHtml(title) + '</div>' +
-      '<div class="notif-body">'  + escHtml(body)  + '</div>' +
-      '<div class="notif-meta">'  + new Date().toLocaleTimeString('fr-FR') + '</div>';
-    feed.prepend(div);
+
+    const el = document.createElement('div');
+    el.className = 'notif-item';
+    const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    el.innerHTML = `
+      <div class="notif-header">
+        <div class="notif-title">${escHtml(title)}</div>
+        <div class="notif-time">${now}</div>
+      </div>
+      <div class="notif-body">${escHtml(body)}</div>
+    `;
+    feed.prepend(el);
   }
 
-  function enableNotifications() {
-    var btn = el('btnEnable');
-    btn.disabled = true;
-    btn.textContent = 'Initialisation…';
-
-    registerSW()
-      .then(function (swReg) {
-        return Notification.requestPermission().then(function (permission) {
-          checkPermission();
-          if (permission !== 'granted') {
-            showAlert('Permission refusée. Activez les notifications dans les réglages du navigateur.', 'error');
-            btn.disabled = false;
-            btn.textContent = 'Réessayer';
-            throw new Error('permission_denied');
-          }
-
-          if (!firebase.apps.length) {
-            firebase.initializeApp(FIREBASE_CONFIG);
-          }
-          var messaging = firebase.messaging();
-          btn.textContent = 'Obtention du token…';
-
-          return messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg })
-            .then(function (token) {
-              if (!token) throw new Error('Token FCM vide');
-              fcmToken = token;
-              setDot('Token', 'green'); setVal('Token', 'Enregistré ✓');
-              el('tokenText').textContent = token;
-              el('tokenBox').classList.add('visible');
-              return saveToken(token).then(function () {
-                showAlert('Notifications activées ! Vous recevrez les messages même téléphone éteint.', 'success');
-                btn.textContent = '✓ Notifications actives';
-                btn.style.background = '#22c55e';
-                messaging.onMessage(function (payload) {
-                  var n = payload.notification || {};
-                  addToFeed(n.title || 'Sans titre', n.body || '');
-                });
-              });
-            });
-        });
-      })
-      .catch(function (err) {
-        if (err.message === 'permission_denied') return;
-        console.error(err);
-        showAlert('Erreur : ' + err.message, 'error');
-        setDot('Token', 'red'); setVal('Token', 'Échec');
-        btn.disabled = false;
-        btn.textContent = 'Réessayer';
-      });
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;');
   }
 
-  function init() {
+  function copyToken() {
+    if (!fcmToken) return;
+    navigator.clipboard.writeText(fcmToken).then(() => showAlert('Token copié.', 'success'));
+  }
+
+  async function init() {
     if (!checkBrowser()) {
-      el('btnEnable').disabled = true;
+      $('btnEnable').disabled = true;
       showAlert('Votre navigateur ne supporte pas les notifications push.', 'error');
       return;
     }
     checkPermission();
     if (Notification.permission === 'granted') {
-      enableNotifications();
+      await enableNotifications();
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    el('btnEnable').addEventListener('click', enableNotifications);
-    el('copyBtn').addEventListener('click', function () {
-      if (!fcmToken) return;
-      navigator.clipboard.writeText(fcmToken).then(function () {
-        showAlert('Token copié !', 'success');
-      });
-    });
-    init();
-  });
-})();
+  $('btnEnable').addEventListener('click', enableNotifications);
+
+  async function enableNotifications() {
+    const btn = $('btnEnable');
+    btn.disabled = true;
+    btn.textContent = 'Initialisation…';
+
+    try {
+      const swReg = await registerSW();
+
+      const permission = await Notification.requestPermission();
+      checkPermission();
+      if (permission !== 'granted') {
+        showAlert('Permission refusée. Activez les notifications dans les réglages du navigateur.', 'error');
+        btn.disabled = false; btn.textContent = 'Réessayer';
+        return;
+      }
+
+      firebase.initializeApp(firebaseConfig);
+      const messaging = firebase.messaging();
+
+      btn.textContent = 'Connexion en cours…';
+      const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+
+      if (!token) throw new Error('Token FCM vide');
+
+      fcmToken = token;
+      $('tokenText').textContent = token;
+
+      setDot('Token', 'green'); setVal('Token', 'Connecté ✓');
+
+      await saveToken(token);
+      showAlert('Notifications activées. Vous recevrez les messages en temps réel.', 'success');
+
+      btn.textContent = '✓ Système actif';
+      btn.classList.add('success');
+
+      if (window._setPulseActive) window._setPulseActive(true);
+
+      listenForeground(messaging);
+
+    } catch(err) {
+      console.error(err);
+      showAlert('Erreur : ' + err.message, 'error');
+      setDot('Token', 'red'); setVal('Token', 'Échec');
+      btn.disabled = false; btn.textContent = 'Réessayer';
+    }
+  }
+
+  init();
 </script>
 </body>
 </html>
