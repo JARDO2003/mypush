@@ -64,13 +64,6 @@ let fcmToken = null;
 let pwVisible = false;
 
 // ── UTILS ──
-function setDot(id, color) {
-  const el = $('dot' + id);
-  el.className = 'status-indicator' + (color ? ' ' + color : '');
-}
-
-function setVal(id, txt) { $('val' + id).textContent = txt; }
-
 function showAlert(msg, type) {
   $('alert').textContent = msg;
   $('alert').className = type;
@@ -84,29 +77,12 @@ function escHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
-// ── CHECKS ──
-function checkBrowser() {
-  const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-  setDot('Browser', ok ? 'green' : 'red');
-  setVal('Browser', ok ? 'Supporté' : 'Non supporté');
-  return ok;
-}
-
-function checkPermission() {
-  const p = Notification.permission;
-  setDot('Perm', p === 'granted' ? 'green' : p === 'denied' ? 'red' : 'yellow');
-  setVal('Perm', p === 'granted' ? 'Accordée' : p === 'denied' ? 'Refusée' : 'En attente');
-  return p;
-}
-
 // ── SERVICE WORKER ──
 async function registerSW() {
   try {
     const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    setDot('SW', 'green'); setVal('SW', 'Enregistré');
     return reg;
   } catch(e) {
-    setDot('SW', 'red'); setVal('SW', 'Échec');
     throw e;
   }
 }
@@ -162,10 +138,16 @@ async function enableNotifications() {
   btn.textContent = 'Initialisation…';
 
   try {
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    if (!supported) {
+      showAlert('Votre navigateur ne supporte pas les notifications push.', 'error');
+      btn.disabled = false; btn.textContent = 'Réessayer';
+      return;
+    }
+
     const swReg = await registerSW();
 
     const permission = await Notification.requestPermission();
-    checkPermission();
     if (permission !== 'granted') {
       showAlert('Permission refusée. Activez les notifications dans les réglages du navigateur.', 'error');
       btn.disabled = false; btn.textContent = 'Réessayer';
@@ -186,8 +168,6 @@ async function enableNotifications() {
     fcmToken = token;
     $('tokenText').textContent = token;
 
-    setDot('Token', 'green'); setVal('Token', 'Connecté ✓');
-
     await saveToken(token);
     showAlert('Notifications activées. Vous recevrez les messages en temps réel.', 'success');
 
@@ -201,7 +181,6 @@ async function enableNotifications() {
   } catch(err) {
     console.error(err);
     showAlert('Erreur : ' + err.message, 'error');
-    setDot('Token', 'red'); setVal('Token', 'Échec');
     btn.disabled = false; btn.textContent = 'Réessayer';
   }
 }
@@ -239,12 +218,12 @@ function submitPassword() {
 
 // ── INIT ──
 async function init() {
-  if (!checkBrowser()) {
+  const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  if (!supported) {
     $('btnEnable').disabled = true;
     showAlert('Votre navigateur ne supporte pas les notifications push.', 'error');
     return;
   }
-  checkPermission();
   if (Notification.permission === 'granted') {
     await enableNotifications();
   }
