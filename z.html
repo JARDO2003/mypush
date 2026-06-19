@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panneau d'envoi — Notifications</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --surface: #131929;
+      --border: #1e2d45;
+      --accent: #a855f7;
+      --accent-glow: rgba(168,85,247,0.18);
+      --accent2: #3b82f6;
+      --green: #22c55e;
+      --green-glow: rgba(34,197,94,0.12);
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --card-bg: #0f1e33;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 60px;
+    }
+
+    header {
+      width: 100%; max-width: 600px;
+      text-align: center;
+      margin-bottom: 44px;
+    }
+    .logo-ring {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 28px var(--accent-glow);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+      background: var(--card-bg);
+    }
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+    }
+    p.subtitle { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.6; }
+
+    .card {
+      width: 100%; max-width: 600px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); margin-bottom: 18px;
+    }
+
+    /* Token list */
+    #tokenList { display: flex; flex-direction: column; gap: 10px; }
+    .token-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .token-item:hover { border-color: var(--accent); background: rgba(168,85,247,0.06); }
+    .token-item.selected { border-color: var(--accent); background: rgba(168,85,247,0.1); }
+    .token-cb {
+      width: 18px; height: 18px;
+      border-radius: 5px; border: 2px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .token-item.selected .token-cb { background: var(--accent); border-color: var(--accent); }
+    .token-cb::after { content: '✓'; font-size: 11px; color: #fff; display: none; }
+    .token-item.selected .token-cb::after { display: block; }
+    .token-info { flex: 1; min-width: 0; }
+    .token-id { font-size: 11px; color: var(--muted); font-family: monospace; }
+    .token-val { font-size: 10px; color: var(--border); font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .token-date { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+    .select-all-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .link-btn {
+      background: none; border: none;
+      color: var(--accent); font-size: 13px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .token-count { font-size: 13px; color: var(--muted); }
+    .empty-msg { color: var(--muted); font-size: 13px; text-align: center; padding: 20px 0; }
+
+    /* Form */
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type=text], textarea {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      resize: vertical;
+      margin-bottom: 18px;
+    }
+    input[type=text]:focus, textarea:focus { border-color: var(--accent); }
+    textarea { min-height: 80px; }
+
+    /* Url & data */
+    .collapsible-btn {
+      background: none; border: none;
+      color: var(--muted); font-size: 13px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      padding: 0; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .collapsible-btn span { transition: transform 0.2s; }
+    .collapsible-btn.open span { transform: rotate(90deg); }
+    .collapsible-content { display: none; }
+    .collapsible-content.open { display: block; }
+
+    /* Send button */
+    #btnSend {
+      width: 100%; padding: 15px;
+      border-radius: 10px; border: none;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 20px var(--accent-glow);
+      transition: all 0.2s;
+    }
+    #btnSend:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+    #btnSend:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Refresh */
+    #btnRefresh {
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 8px;
+      padding: 8px 16px; font-size: 13px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    #btnRefresh:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* Alert */
+    #alert {
+      width: 100%; max-width: 600px;
+      padding: 12px 16px;
+      border-radius: 10px; font-size: 13px;
+      margin-bottom: 16px; display: none; line-height: 1.5;
+    }
+    #alert.success { background: var(--green-glow); border: 1px solid var(--green); color: var(--green); display: block; }
+    #alert.error   { background: rgba(239,68,68,0.1); border: 1px solid var(--red); color: var(--red); display: block; }
+
+    /* Log */
+    #logWrap { max-height: 220px; overflow-y: auto; }
+    .log-item {
+      font-size: 12px; font-family: monospace;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      color: var(--muted); line-height: 1.5;
+    }
+    .log-item .tag { padding: 2px 7px; border-radius: 4px; margin-right: 8px; font-weight: 600; font-size: 11px; }
+    .tag.ok  { background: var(--green-glow); color: var(--green); }
+    .tag.err { background: rgba(239,68,68,0.1); color: var(--red); }
+    .tag.inf { background: rgba(59,130,246,0.1); color: var(--accent2); }
+
+    .sep { display: flex; align-items: center; gap: 10px; margin: 6px 0 18px; }
+    .sep-line { flex: 1; height: 1px; background: var(--border); }
+    .sep-txt { font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-ring">📡</div>
+  <h1>Panneau d'envoi</h1>
+  <p class="subtitle">Sélectionnez des destinataires, composez votre message, envoyez.</p>
+</header>
+
+<div id="alert"></div>
+
+<!-- Destinataires -->
+<div class="card">
+  <div class="card-title">Destinataires</div>
+  <div class="select-all-row">
+    <span class="token-count" id="tokenCount">Chargement…</span>
+    <div style="display:flex;gap:12px">
+      <button class="link-btn" onclick="selectAll()">Tout sélectionner</button>
+      <button class="link-btn" onclick="deselectAll()">Désélectionner</button>
+      <button id="btnRefresh" onclick="loadTokens()">↺ Rafraîchir</button>
+    </div>
+  </div>
+  <div id="tokenList"><div class="empty-msg">Chargement des appareils…</div></div>
+</div>
+
+<!-- Message -->
+<div class="card">
+  <div class="card-title">Message</div>
+  <label for="msgTitle">Titre *</label>
+  <input type="text" id="msgTitle" placeholder="Ex : Nouvelle mise à jour disponible" />
+  <label for="msgBody">Contenu *</label>
+  <textarea id="msgBody" placeholder="Rédigez votre message ici…"></textarea>
+
+  <button class="collapsible-btn" id="colBtn" onclick="toggleCollapsible()">
+    <span>›</span> Options avancées (URL, données)
+  </button>
+  <div class="collapsible-content" id="colContent">
+    <label for="msgUrl">URL d'ouverture (optionnel)</label>
+    <input type="text" id="msgUrl" placeholder="https://votre-site.com/page" />
+    <label for="msgData">Données JSON supplémentaires (optionnel)</label>
+    <textarea id="msgData" placeholder='{"key": "value"}' style="min-height:60px;font-family:monospace;font-size:12px;"></textarea>
+  </div>
+
+  <button id="btnSend" onclick="sendNotifications()">Envoyer la notification</button>
+</div>
+
+<!-- Journal -->
+<div class="card">
+  <div class="card-title">Journal d'envoi</div>
+  <div id="logWrap">
+    <div class="log-item"><span class="tag inf">INFO</span>En attente d'une action.</div>
+  </div>
+</div>
+
+<script>
+  // ─── CONFIG (extraite de firebase-config.js) ───────────────────────────────
+  const API_BASE = window.location.origin;
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const $ = id => document.getElementById(id);
+  let allTokens = [];
+  let selectedIds = new Set();
+
+  // ─── Alert ────────────────────────────────────────────────────────────────
+  function showAlert(msg, type) {
+    $('alert').innerHTML = msg;
+    $('alert').className = type;
+    setTimeout(() => $('alert').className = '', 5000);
+  }
+
+  // ─── Log ─────────────────────────────────────────────────────────────────
+  function addLog(msg, type = 'inf') {
+    const wrap = $('logWrap');
+    const el = document.createElement('div');
+    el.className = 'log-item';
+    el.innerHTML = `<span class="tag ${type}">${type.toUpperCase()}</span>${escHtml(msg)} <span style="color:var(--border);float:right">${new Date().toLocaleTimeString('fr-FR')}</span>`;
+    wrap.prepend(el);
+    // Limiter à 50 entrées
+    while (wrap.children.length > 50) wrap.removeChild(wrap.lastChild);
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── Chargement des tokens ────────────────────────────────────────────────
+  async function loadTokens() {
+    $('tokenList').innerHTML = '<div class="empty-msg">Chargement…</div>';
+    $('tokenCount').textContent = 'Chargement…';
+    try {
+      const res = await fetch(`${API_BASE}/api/get-tokens`);
+      const data = await res.json();
+      allTokens = data.tokens || [];
+      renderTokens();
+      addLog(`${allTokens.length} appareil(s) chargé(s)`, 'inf');
+    } catch(e) {
+      $('tokenList').innerHTML = '<div class="empty-msg">Erreur de chargement. Vérifiez l'API.</div>';
+      $('tokenCount').textContent = '0 appareil';
+      addLog('Erreur chargement tokens : ' + e.message, 'err');
+    }
+  }
+
+  function renderTokens() {
+    const list = $('tokenList');
+    if (!allTokens.length) {
+      list.innerHTML = '<div class="empty-msg">Aucun appareil enregistré. Ouvrez index.html pour en ajouter.</div>';
+      $('tokenCount').textContent = '0 appareil';
+      return;
+    }
+    $('tokenCount').textContent = `${allTokens.length} appareil(s) — ${selectedIds.size} sélectionné(s)`;
+    list.innerHTML = '';
+    allTokens.forEach(t => {
+      const sel = selectedIds.has(t.id);
+      const el = document.createElement('div');
+      el.className = 'token-item' + (sel ? ' selected' : '');
+      el.dataset.id = t.id;
+      const date = t.createdAt ? new Date(t.createdAt).toLocaleDateString('fr-FR') : '—';
+      el.innerHTML = `
+        <div class="token-cb"></div>
+        <div class="token-info">
+          <div class="token-id">${escHtml(t.userId || t.id)}</div>
+          <div class="token-val">${escHtml(t.token)}</div>
+        </div>
+        <div class="token-date">${date}</div>
+      `;
+      el.addEventListener('click', () => toggleToken(t.id));
+      list.appendChild(el);
+    });
+  }
+
+  function toggleToken(id) {
+    selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+    renderTokens();
+  }
+  function selectAll()   { allTokens.forEach(t => selectedIds.add(t.id)); renderTokens(); }
+  function deselectAll() { selectedIds.clear(); renderTokens(); }
+
+  // ─── Collapsible ──────────────────────────────────────────────────────────
+  function toggleCollapsible() {
+    $('colContent').classList.toggle('open');
+    $('colBtn').classList.toggle('open');
+  }
+
+  // ─── Envoi ────────────────────────────────────────────────────────────────
+  async function sendNotifications() {
+    const title = $('msgTitle').value.trim();
+    const body  = $('msgBody').value.trim();
+    const url   = $('msgUrl').value.trim();
+    const rawData = $('msgData').value.trim();
+
+    if (!title || !body) { showAlert('Veuillez remplir le titre et le contenu.', 'error'); return; }
+    if (!selectedIds.size) { showAlert('Sélectionnez au moins un appareil.', 'error'); return; }
+
+    let extraData = {};
+    if (rawData) {
+      try { extraData = JSON.parse(rawData); }
+      catch(e) { showAlert('Données JSON invalides : ' + e.message, 'error'); return; }
+    }
+    if (url) extraData.url = url;
+
+    const tokens = allTokens.filter(t => selectedIds.has(t.id)).map(t => t.token);
+
+    const btn = $('btnSend');
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours…';
+    addLog(`Envoi à ${tokens.length} appareil(s) : "${title}"`, 'inf');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/send-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokens, title, body, data: extraData }),
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        showAlert(`✓ Envoyé — ${result.successCount} succès, ${result.failureCount} échec(s).`, 'success');
+        addLog(`Succès : ${result.successCount} | Échecs : ${result.failureCount}`, result.failureCount ? 'err' : 'ok');
+        if (result.failureCount) await loadTokens(); // Rafraîchir si tokens invalides supprimés
+      } else {
+        showAlert('Erreur serveur : ' + (result.error || 'inconnue'), 'error');
+        addLog('Erreur : ' + (result.error || 'inconnue'), 'err');
+      }
+    } catch(e) {
+      showAlert('Erreur réseau : ' + e.message, 'error');
+      addLog('Erreur réseau : ' + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Envoyer la notification';
+    }
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
+  loadTokens();
+</script>
+</body>
+</html>
