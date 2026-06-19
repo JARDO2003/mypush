@@ -1,6 +1,3 @@
-// Firebase Messaging Service Worker
-// Ce fichier DOIT être à la racine du domaine (public/)
-
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
@@ -15,41 +12,42 @@ firebase.initializeApp({
   measurementId: "G-FYQCWY5G4S"
 });
 
-const messaging = firebase.messaging();
+var messaging = firebase.messaging();
 
-// Gestion des messages reçus en arrière-plan
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Message reçu en arrière-plan:', payload);
+messaging.onBackgroundMessage(function(payload) {
+  var title = (payload.notification && payload.notification.title) ? payload.notification.title : 'Express Notify';
+  var body  = (payload.notification && payload.notification.body)  ? payload.notification.body  : '';
+  var icon  = (payload.notification && payload.notification.icon)  ? payload.notification.icon  : '/icon.png';
 
-  const { title, body, icon } = payload.notification || {};
-
-  const notificationOptions = {
-    body: body || '',
-    icon: icon || '/icon.png',
+  var options = {
+    body: body,
+    icon: icon,
     badge: '/badge.png',
     data: payload.data || {},
     requireInteraction: true,
     vibrate: [200, 100, 200],
     actions: [
-      { action: 'open', title: 'Ouvrir' },
-      { action: 'close', title: 'Fermer' },
-    ],
+      { action: 'open',  title: 'Voir' },
+      { action: 'close', title: 'Fermer' }
+    ]
   };
 
-  return self.registration.showNotification(title || 'Notification', notificationOptions);
+  return self.registration.showNotification(title, options);
 });
 
-// Gestion du clic sur la notification
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', function(event) {
   event.notification.close();
 
   if (event.action === 'close') return;
 
-  const url = event.notification.data?.url || '/';
+  var url = (event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
+    : '/';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
         if (client.url === url && 'focus' in client) {
           return client.focus();
         }
