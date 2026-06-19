@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications — Récepteur</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --surface: #131929;
+      --border: #1e2d45;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.18);
+      --green: #22c55e;
+      --green-glow: rgba(34,197,94,0.15);
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --card-bg: #0f1e33;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 60px;
+    }
+    header {
+      width: 100%;
+      max-width: 520px;
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .logo-ring {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 28px var(--accent-glow);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+      background: var(--card-bg);
+    }
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    p.subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    /* Status row */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-row:last-child { border-bottom: none; }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--muted);
+    }
+    .dot.green { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+    .dot.red   { background: var(--red); }
+    .dot.yellow { background: var(--yellow); animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .status-label { font-size: 14px; color: var(--text); flex: 1; }
+    .status-value { font-size: 12px; color: var(--muted); font-family: monospace; }
+
+    /* Button */
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #btnEnable {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    #btnEnable:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+    #btnEnable:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    /* Token box */
+    .token-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--muted);
+      word-break: break-all;
+      line-height: 1.6;
+      margin-top: 14px;
+      position: relative;
+      display: none;
+    }
+    .token-box.visible { display: block; }
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      padding: 4px 10px; font-size: 11px;
+      background: var(--border); color: var(--text);
+      border-radius: 5px; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-weight: 500;
+    }
+    .copy-btn:hover { background: var(--accent); color: #fff; }
+
+    /* Notification feed */
+    #feed { display: flex; flex-direction: column; gap: 12px; }
+    .notif-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 14px 16px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+    .notif-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .notif-body { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .notif-meta { font-size: 11px; color: var(--border); margin-top: 8px; font-family: monospace; }
+    .empty-feed {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 24px 0;
+    }
+
+    /* Alert */
+    #alert {
+      width: 100%; max-width: 520px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    #alert.success { background: var(--green-glow); border: 1px solid var(--green); color: var(--green); display: block; }
+    #alert.error   { background: rgba(239,68,68,0.1); border: 1px solid var(--red); color: var(--red); display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-ring">🔔</div>
+  <h1>Récepteur de notifications</h1>
+  <p class="subtitle">Autorisez les notifications pour continuer à les recevoir même lorsque l'appareil est verrouillé.</p>
+</header>
+
+<div id="alert"></div>
+
+<!-- Status card -->
+<div class="card">
+  <div class="card-title">État du système</div>
+
+  <div class="status-row">
+    <div class="dot" id="dotBrowser"></div>
+    <span class="status-label">Navigateur compatible</span>
+    <span class="status-value" id="valBrowser">—</span>
+  </div>
+  <div class="status-row">
+    <div class="dot" id="dotSW"></div>
+    <span class="status-label">Service Worker</span>
+    <span class="status-value" id="valSW">—</span>
+  </div>
+  <div class="status-row">
+    <div class="dot" id="dotPerm"></div>
+    <span class="status-label">Permission notifications</span>
+    <span class="status-value" id="valPerm">—</span>
+  </div>
+  <div class="status-row">
+    <div class="dot" id="dotToken"></div>
+    <span class="status-label">Token FCM enregistré</span>
+    <span class="status-value" id="valToken">—</span>
+  </div>
+</div>
+
+<!-- Activation card -->
+<div class="card">
+  <div class="card-title">Activation</div>
+  <button id="btnEnable">Activer les notifications</button>
+  <div class="token-box" id="tokenBox">
+    <button class="copy-btn" onclick="copyToken()">Copier</button>
+    <span id="tokenText"></span>
+  </div>
+</div>
+
+<!-- Feed card -->
+<div class="card">
+  <div class="card-title">Notifications reçues (session)</div>
+  <div id="feed"><div class="empty-feed">Aucune notification reçue pour l'instant.</div></div>
+</div>
+   <div class="cta-wrap">
+    <a class="cta-btn" href="z.html" target="_blank" rel="noopener">
+      Accéder
+    </a>
+  </div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+
+<script>
+  // ─── CONFIG (extraite de firebase-config.js) ───────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyCPGgtXoDUycykLaTSee0S0yY0tkeJpqKI",
+    authDomain: "data-com-a94a8.firebaseapp.com",
+    databaseURL: "https://data-com-a94a8-default-rtdb.firebaseio.com",
+    projectId: "data-com-a94a8",
+    storageBucket: "data-com-a94a8.firebasestorage.app",
+    messagingSenderId: "276904640935",
+    appId: "1:276904640935:web:9cd805aeba6c34c767f682",
+    measurementId: "G-FYQCWY5G4S"
+  };
+  const VAPID_KEY = "BBmFUU8EgrWms0LnAcsleRMkYPXS7A0teI22WNVEpg2Xii6RwkQ6XuR1IfJAVUHUo8PabGi26OQ2iaYXMRs0IbU";
+  const API_BASE  = window.location.origin;          // adapté automatiquement à votre domaine
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const $ = id => document.getElementById(id);
+  let fcmToken = null;
+
+  // ─── Helpers UI ──────────────────────────────────────────────────────────
+  function setDot(id, color) { $('dot'+id).className = 'dot ' + color; }
+  function setVal(id, txt)   { $('val'+id).textContent = txt; }
+  function showAlert(msg, type) {
+    $('alert').textContent = msg;
+    $('alert').className = type;
+    setTimeout(() => $('alert').className = '', 4000);
+  }
+
+  // ─── Vérification navigateur ─────────────────────────────────────────────
+  function checkBrowser() {
+    const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    setDot('Browser', ok ? 'green' : 'red');
+    setVal('Browser', ok ? 'Supporté' : 'Non supporté');
+    return ok;
+  }
+
+  // ─── Vérification permission ──────────────────────────────────────────────
+  function checkPermission() {
+    const p = Notification.permission;
+    setDot('Perm', p === 'granted' ? 'green' : p === 'denied' ? 'red' : 'yellow');
+    setVal('Perm', p === 'granted' ? 'Accordée' : p === 'denied' ? 'Refusée' : 'En attente');
+    return p;
+  }
+
+  // ─── Enregistrement Service Worker ───────────────────────────────────────
+  async function registerSW() {
+    try {
+      // Le SW doit être à la racine de votre domaine : /firebase-messaging-sw.js
+      const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      setDot('SW', 'green'); setVal('SW', 'Enregistré');
+      return reg;
+    } catch(e) {
+      setDot('SW', 'red'); setVal('SW', 'Échec');
+      throw e;
+    }
+  }
+
+  // ─── Sauvegarde token sur le serveur ─────────────────────────────────────
+  async function saveToken(token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/save-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, userId: null }),
+      });
+      return await res.json();
+    } catch(e) { console.warn('save-token error', e); }
+  }
+
+  // ─── Flux notifications en premier plan ──────────────────────────────────
+  function listenForeground(messaging) {
+    messaging.onMessage(payload => {
+      console.log('[FCM] foreground:', payload);
+      addToFeed(payload.notification?.title || 'Sans titre', payload.notification?.body || '', payload.data);
+    });
+  }
+
+  function addToFeed(title, body, data = {}) {
+    const feed = $('feed');
+    const empty = feed.querySelector('.empty-feed');
+    if (empty) empty.remove();
+
+    const el = document.createElement('div');
+    el.className = 'notif-item';
+    el.innerHTML = `
+      <div class="notif-title">${escHtml(title)}</div>
+      <div class="notif-body">${escHtml(body)}</div>
+      <div class="notif-meta">${new Date().toLocaleTimeString('fr-FR')}</div>
+    `;
+    feed.prepend(el);
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── Copier le token ──────────────────────────────────────────────────────
+  function copyToken() {
+    if (!fcmToken) return;
+    navigator.clipboard.writeText(fcmToken).then(() => showAlert('Token copié !', 'success'));
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
+  async function init() {
+    if (!checkBrowser()) {
+      $('btnEnable').disabled = true;
+      showAlert('Votre navigateur ne supporte pas les notifications push.', 'error');
+      return;
+    }
+    checkPermission();
+
+    // Si déjà accordé → activer directement
+    if (Notification.permission === 'granted') {
+      await enableNotifications();
+    }
+  }
+
+  // ─── Activation ──────────────────────────────────────────────────────────
+  $('btnEnable').addEventListener('click', enableNotifications);
+
+  async function enableNotifications() {
+    const btn = $('btnEnable');
+    btn.disabled = true;
+    btn.textContent = 'Initialisation…';
+
+    try {
+      const swReg = await registerSW();
+
+      const permission = await Notification.requestPermission();
+      checkPermission();
+      if (permission !== 'granted') {
+        showAlert('Permission refusée. Activez les notifications dans les réglages du navigateur.', 'error');
+        btn.disabled = false; btn.textContent = 'Réessayer';
+        return;
+      }
+
+      firebase.initializeApp(firebaseConfig);
+      const messaging = firebase.messaging();
+
+      btn.textContent = 'Obtention du token…';
+      const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+
+      if (!token) throw new Error('Token FCM vide');
+
+      fcmToken = token;
+      setDot('Token', 'green'); setVal('Token', 'Enregistré ✓');
+
+      // Afficher le token
+      $('tokenText').textContent = token;
+      $('tokenBox').classList.add('visible');
+
+      // Sauvegarder sur le serveur
+      await saveToken(token);
+      showAlert('Notifications activées ! Vous recevrez les messages même téléphone éteint.', 'success');
+
+      btn.textContent = '✓ Notifications actives';
+      btn.style.background = '#22c55e';
+
+      // Écoute en premier plan
+      listenForeground(messaging);
+
+    } catch(err) {
+      console.error(err);
+      showAlert('Erreur : ' + err.message, 'error');
+      setDot('Token', 'red'); setVal('Token', 'Échec');
+      btn.disabled = false; btn.textContent = 'Réessayer';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
