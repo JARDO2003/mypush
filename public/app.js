@@ -7,7 +7,6 @@
   const H = 56;
   canvas.width = W;
   canvas.height = H;
-
   let active = false;
   let offset = 0;
 
@@ -16,30 +15,28 @@
     ctx.beginPath();
     ctx.strokeStyle = active ? 'rgba(226,201,126,0.7)' : 'rgba(240,237,232,0.12)';
     ctx.lineWidth = 1.5;
-    const step = 4;
     const mid = H / 2;
     let x = 0;
     ctx.moveTo(0, mid);
     while (x < W) {
       const phase = (x + offset) % 80;
       let y = mid;
-      if (phase > 30 && phase < 36)      y = mid - 22;
+      if      (phase > 30 && phase < 36)  y = mid - 22;
       else if (phase >= 36 && phase < 40) y = mid + 10;
       else if (phase >= 40 && phase < 44) y = mid - 6;
       else if (phase >= 44 && phase < 48) y = mid + 2;
       ctx.lineTo(x, y);
-      x += step;
+      x += 4;
     }
     ctx.stroke();
     offset = active ? (offset + 1.5) % 80 : offset;
     requestAnimationFrame(drawPulse);
   }
-
   drawPulse();
-  window._setPulseActive = function(val) { active = val; };
+  window._setPulseActive = v => { active = v; };
 })();
 
-// ── CONFIG ──
+// ── FIREBASE CONFIG ──
 const firebaseConfig = {
   apiKey:            "AIzaSyCPGgtXoDUycykLaTSee0S0yY0tkeJpqKI",
   authDomain:        "data-com-a94a8.firebaseapp.com",
@@ -50,29 +47,23 @@ const firebaseConfig = {
   appId:             "1:276904640935:web:9cd805aeba6c34c767f682",
   measurementId:     "G-FYQCWY5G4S"
 };
-const VAPID_KEY       = "BBmFUU8EgrWms0LnAcsleRMkYPXS7A0teI22WNVEpg2Xii6RwkQ6XuR1IfJAVUHUo8PabGi26OQ2iaYXMRs0IbU";
-const API_BASE        = window.location.origin;
+const VAPID_KEY        = "BBmFUU8EgrWms0LnAcsleRMkYPXS7A0teI22WNVEpg2Xii6RwkQ6XuR1IfJAVUHUo8PabGi26OQ2iaYXMRs0IbU";
+const API_BASE         = window.location.origin;
 const CORRECT_PASSWORD = "express200@";
-const DB_PATH         = "notifications";
+const DB_PATH          = "notifications";
 
 const $ = id => document.getElementById(id);
-let fcmToken  = null;
 let pwVisible = false;
-let db        = null;   // Firebase Realtime Database reference
-let appInited = false;  // guard against double initializeApp
 
 // ── UTILS ──
 function showAlert(msg, type) {
   $('alert').textContent = msg;
-  $('alert').className = type;
+  $('alert').className   = type;
   setTimeout(() => { $('alert').className = ''; }, 5000);
 }
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function formatDateTime(ts) {
@@ -85,7 +76,7 @@ function formatDateTime(ts) {
   return `${DAYS[d.getDay()]} ${d.getDate()} ${MONS[d.getMonth()]} ${d.getFullYear()} — ${hh}:${mm}:${ss}`;
 }
 
-// ── FEED DOM ──
+// ── FEED ──
 function renderEmptyFeed() {
   $('feed').innerHTML = `
     <div class="empty-feed">
@@ -105,79 +96,30 @@ function buildNotifEl(key, notif) {
     </div>
     <div class="notif-meta">${escHtml(formatDateTime(notif.ts || Date.now()))}</div>
     <div class="notif-body">${escHtml(notif.body || '')}</div>`;
-
-  el.querySelector('.notif-delete').addEventListener('click', () => deleteNotif(key, el));
+  el.querySelector('.notif-delete').addEventListener('click', () => {
+    firebase.database().ref(`${DB_PATH}/${key}`).remove();
+    el.style.cssText = 'opacity:0;transform:translateX(30px);transition:opacity .2s,transform .2s';
+  });
   return el;
 }
 
-// ── FIREBASE DB ──
-function getDb() {
-  // firebase.database() is from firebase-database-compat.js
-  if (!db) db = firebase.database();
-  return db;
-}
-
-function saveNotifToDb(notif) {
-  // push() auto-generates a unique key and returns a ref
-  return getDb().ref(DB_PATH).push(notif);
-}
-
-function deleteNotif(key, el) {
-  // Remove from DB — listener will update the UI automatically
-  getDb().ref(`${DB_PATH}/${key}`).remove();
-  // Optimistic UI: animate out immediately
-  el.style.opacity    = '0';
-  el.style.transform  = 'translateX(30px)';
-  el.style.transition = 'opacity 0.2s, transform 0.2s';
-}
-
-// ── REALTIME LISTENER ──
-// Called once after Firebase is initialised. Replaces the whole feed
-// every time the DB changes so any device/tab stays in sync.
-function startRealtimeListener() {
-  getDb().ref(DB_PATH).on('value', snapshot => {
+// ── CONNEXION DB EN TEMPS RÉEL ──
+// Appelée dès le chargement — pas besoin de permission ni de bouton
+function connectDatabase() {
+  firebase.database().ref(DB_PATH).on('value', snapshot => {
     const feed = $('feed');
     feed.innerHTML = '';
-
     const data = snapshot.val();
     if (!data) { renderEmptyFeed(); return; }
 
-    // Convert object to array sorted newest first
-    const entries = Object.entries(data)
+    Object.entries(data)
       .map(([key, val]) => ({ key, ...val }))
-      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
-
-    entries.forEach(({ key, ...notif }) => {
-      feed.appendChild(buildNotifEl(key, notif));
-    });
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+      .forEach(({ key, ...notif }) => feed.appendChild(buildNotifEl(key, notif)));
   });
 }
 
-// Called when a new FCM message arrives (foreground only).
-// We just write to DB; the listener above handles display.
-function addNotifToDb(title, body) {
-  const notif = { title, body, ts: Date.now() };
-  saveNotifToDb(notif).catch(err => console.error('DB write error', err));
-}
-
-// ── SERVICE WORKER ──
-async function registerSW() {
-  return navigator.serviceWorker.register('/firebase-messaging-sw.js');
-}
-
-// ── FCM TOKEN ──
-async function saveTokenToServer(token) {
-  try {
-    const res = await fetch(`${API_BASE}/api/save-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, userId: null }),
-    });
-    return await res.json();
-  } catch(e) { console.warn('save-token error', e); }
-}
-
-// ── INIT FIREBASE & MESSAGING ──
+// ── FCM (push notifications) ──
 async function enableNotifications() {
   const btn = $('btnEnable');
   btn.disabled    = true;
@@ -186,28 +128,19 @@ async function enableNotifications() {
   try {
     const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     if (!supported) {
-      showAlert('Votre navigateur ne supporte pas les notifications push.', 'error');
+      showAlert('Navigateur non compatible avec les notifications push.', 'error');
       btn.disabled = false; btn.textContent = 'Réessayer';
       return;
     }
 
-    const swReg = await registerSW();
+    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      showAlert('Permission refusée. Activez les notifications dans les réglages du navigateur.', 'error');
+      showAlert('Permission refusée. Activez les notifications dans les réglages.', 'error');
       btn.disabled = false; btn.textContent = 'Réessayer';
       return;
     }
-
-    // Init Firebase app once
-    if (!appInited) {
-      firebase.initializeApp(firebaseConfig);
-      appInited = true;
-    }
-
-    // Start DB sync immediately after app init
-    startRealtimeListener();
 
     const messaging = firebase.messaging();
     btn.textContent = 'Connexion en cours…';
@@ -215,23 +148,30 @@ async function enableNotifications() {
     const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
     if (!token) throw new Error('Token FCM vide');
 
-    fcmToken = token;
     $('tokenText').textContent = token;
 
-    await saveTokenToServer(token);
-    showAlert('Notifications activées. Synchronisation en temps réel active.', 'success');
+    // Enregistrer le token côté serveur
+    try {
+      await fetch(`${API_BASE}/api/save-token`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ token, userId: null })
+      });
+    } catch(e) { console.warn('save-token error', e); }
 
+    showAlert('Notifications activées. Synchronisation en temps réel active.', 'success');
     btn.textContent = '✓ Système actif';
     btn.classList.add('success');
     if (window._setPulseActive) window._setPulseActive(true);
 
-    // Foreground messages → write to DB
+    // Message reçu quand la page est OUVERTE → écrire en DB
+    // (le SW gère le cas où la page est fermée)
     messaging.onMessage(payload => {
-      console.log('[FCM foreground]', payload);
-      addNotifToDb(
-        payload.notification?.title || 'Sans titre',
-        payload.notification?.body  || ''
-      );
+      firebase.database().ref(DB_PATH).push({
+        title: payload.notification?.title || 'Sans titre',
+        body:  payload.notification?.body  || '',
+        ts:    Date.now()
+      });
     });
 
   } catch(err) {
@@ -270,26 +210,23 @@ function submitPassword() {
 }
 
 // ── INIT ──
-async function init() {
-  // Show empty state until DB loads
-  renderEmptyFeed();
+// 1. Initialiser Firebase immédiatement
+// 2. Connecter la DB → afficher tout le contenu existant
+// 3. Activer FCM si permission déjà accordée
+(function init() {
+  firebase.initializeApp(firebaseConfig);
 
-  const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-  if (!supported) {
-    $('btnEnable').disabled = true;
-    showAlert('Votre navigateur ne supporte pas les notifications push.', 'error');
-    return;
-  }
+  // Connexion DB directe — pas besoin de permission push
+  connectDatabase();
 
-  // If already authorised, init silently
+  // Activer FCM silencieusement si déjà autorisé
   if (Notification.permission === 'granted') {
-    await enableNotifications();
+    enableNotifications();
   }
-}
+})();
 
 // ── EVENTS ──
 $('btnEnable').addEventListener('click', enableNotifications);
-
 $('ctaAcceder').addEventListener('click', e => { e.preventDefault(); openModal(); });
 $('pwClose').addEventListener('click', closeModal);
 $('pwOverlay').addEventListener('click', e => { if (e.target === $('pwOverlay')) closeModal(); });
@@ -300,8 +237,6 @@ $('pwInput').addEventListener('keydown', e => {
 });
 $('pwToggle').addEventListener('click', function() {
   pwVisible = !pwVisible;
-  $('pwInput').type        = pwVisible ? 'text' : 'password';
-  this.textContent         = pwVisible ? 'cacher' : 'voir';
+  $('pwInput').type    = pwVisible ? 'text' : 'password';
+  this.textContent     = pwVisible ? 'cacher' : 'voir';
 });
-
-init();
